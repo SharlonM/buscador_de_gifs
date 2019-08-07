@@ -1,7 +1,9 @@
 import 'dart:convert';
-
+import 'package:transparent_image/transparent_image.dart';
+import 'package:buscador_de_gifs/interface/show_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:share/share.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -72,7 +74,9 @@ class _HomePageState extends State<HomePage> {
             return progressBar();
           default:
             if (snapshot.hasError)
-              return Container();
+              return Container(
+                child: Text("ERRO"),
+              );
             else
               return createTabelaGifs(context, snapshot);
         }
@@ -112,41 +116,69 @@ class _HomePageState extends State<HomePage> {
         textAlign: TextAlign.center,
         onFieldSubmitted: (text) {
           setState(() {
-            _pesquisar = text;
-            _offset = 0;
+            if (text.isEmpty) {
+              _pesquisar = null;
+            } else {
+              _pesquisar = text;
+              _offset = 0;
+            }
           });
         },
       ),
     );
   }
 
-  int _getRange(List data){
-    if(_pesquisar == null){
+  int _getRange(List data) {
+    if (_pesquisar == null) {
       return data.length;
-    }else{
-      return data.length +1;
+    } else {
+      return data.length + 1;
     }
   }
 
   createTabelaGifs(context, snapshot) {
-    return GridView.builder(
-        padding: EdgeInsets.all(10),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 5),
-        itemCount: _getRange(snapshot.data["data"]),
-        itemBuilder: (context, index) {
-          if (_pesquisar == null || index < snapshot.data["data"].length) {
-            return GestureDetector(
-              child: Image.network(
-                snapshot.data["data"][index]["images"]["fixed_height"]["url"],
-                height: 300,
-                fit: BoxFit.cover,
-              ),
-            );
-          } else {
-            return carregarMais();
-          }
-        });
+    if (snapshot.data["data"].length < 1) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Text(
+            "Nenhum gif encontrado",
+            style: TextStyle(color: Colors.white, fontSize: 30),
+          ),
+        ),
+      );
+    } else {
+      return GridView.builder(
+          padding: EdgeInsets.all(10),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 5),
+          itemCount: _getRange(snapshot.data["data"]),
+          itemBuilder: (context, index) {
+            if (_pesquisar == null || index < snapshot.data["data"].length) {
+              return GestureDetector(
+                child: FadeInImage.memoryNetwork(
+                  placeholder: kTransparentImage,
+                  image: snapshot.data["data"][index]["images"]["fixed_height"]["url"],
+                  height: 300,
+                  fit: BoxFit.cover,
+                ),
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) =>
+                              GifPage(snapshot.data["data"][index])));
+                },
+                onLongPress: () {
+                  Share.share(snapshot.data["data"][index]["images"]
+                      ["fixed_height"]["url"]);
+                },
+              );
+            } else {
+              return carregarMais();
+            }
+          });
+    }
   }
 
   carregarMais() {
@@ -163,7 +195,7 @@ class _HomePageState extends State<HomePage> {
             )
           ],
         ),
-        onTap: (){
+        onTap: () {
           setState(() {
             _offset += 25;
           });
