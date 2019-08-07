@@ -29,7 +29,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.all(10),
+      padding: EdgeInsets.all(5),
       child: layoutPrincipal(),
     );
   }
@@ -56,34 +56,42 @@ class _HomePageState extends State<HomePage> {
             child: campoDeTexto(),
           ),
           Expanded(
-            child: FutureBuilder(
-              builder: (context, snapshot) {
-                switch (snapshot.connectionState) {
-                  case ConnectionState.waiting:
-                  case ConnectionState.none:
-                    return Container(
-                      width: 150,
-                      height: 150,
-                      alignment: Alignment.center,
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        strokeWidth: 5,
-                      ),
-                    );
-                  default:
-                    if (snapshot.hasError)
-                      return Container();
-                    else
-                      return createTabelaGifs(context, snapshot);
-                }
-              },
-              future: _getGifs(),
-            ),
+            child: checkConnections(),
           )
         ],
       ),
     );
   } // LAYOUT PRINCIPAL
+
+  checkConnections() {
+    return FutureBuilder(
+      builder: (context, snapshot) {
+        switch (snapshot.connectionState) {
+          case ConnectionState.waiting:
+          case ConnectionState.none:
+            return progressBar();
+          default:
+            if (snapshot.hasError)
+              return Container();
+            else
+              return createTabelaGifs(context, snapshot);
+        }
+      },
+      future: _getGifs(),
+    );
+  }
+
+  progressBar() {
+    return Container(
+      width: 150,
+      height: 150,
+      alignment: Alignment.center,
+      child: CircularProgressIndicator(
+        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        strokeWidth: 5,
+      ),
+    );
+  }
 
   campoDeTexto() {
     return Theme(
@@ -94,15 +102,30 @@ class _HomePageState extends State<HomePage> {
             labelText: "Pesquise aqui",
             fillColor: Colors.white,
             labelStyle: TextStyle(color: Colors.white, fontSize: 18),
-            border: new OutlineInputBorder(
-              borderRadius: new BorderRadius.circular(25),
-              borderSide: new BorderSide(color: Colors.white),
-            ),
-        ),
-        style: TextStyle(color: Colors.white, fontSize: 20),
+            border: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white, width: 2),
+                borderRadius: BorderRadius.all(Radius.circular(30.0))),
+            enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white, width: 2),
+                borderRadius: BorderRadius.all(Radius.circular(30.0)))),
+        style: TextStyle(color: Colors.white, fontSize: 16),
         textAlign: TextAlign.center,
+        onFieldSubmitted: (text) {
+          setState(() {
+            _pesquisar = text;
+            _offset = 0;
+          });
+        },
       ),
     );
+  }
+
+  int _getRange(List data){
+    if(_pesquisar == null){
+      return data.length;
+    }else{
+      return data.length +1;
+    }
   }
 
   createTabelaGifs(context, snapshot) {
@@ -110,15 +133,42 @@ class _HomePageState extends State<HomePage> {
         padding: EdgeInsets.all(10),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 5),
-        itemCount: snapshot.data["data"].length,
+        itemCount: _getRange(snapshot.data["data"]),
         itemBuilder: (context, index) {
-          return GestureDetector(
-            child: Image.network(
-              snapshot.data["data"][index]["images"]["fixed_height"]["url"],
-              height: 300,
-              fit: BoxFit.cover,
-            ),
-          );
+          if (_pesquisar == null || index < snapshot.data["data"].length) {
+            return GestureDetector(
+              child: Image.network(
+                snapshot.data["data"][index]["images"]["fixed_height"]["url"],
+                height: 300,
+                fit: BoxFit.cover,
+              ),
+            );
+          } else {
+            return carregarMais();
+          }
         });
+  }
+
+  carregarMais() {
+    return Container(
+      color: Colors.black,
+      child: GestureDetector(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(Icons.more_horiz, color: Colors.white, size: 50),
+            Text(
+              "Carregar mais",
+              style: TextStyle(color: Colors.white, fontSize: 20),
+            )
+          ],
+        ),
+        onTap: (){
+          setState(() {
+            _offset += 25;
+          });
+        },
+      ),
+    );
   }
 }
